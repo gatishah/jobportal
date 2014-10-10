@@ -7,16 +7,24 @@ class JobapplicationsController < ApplicationController
     @jobapplications = Jobapplication.all
   end
 
+
   def list_applications
     @jobapplications = Jobapplication.where(:job_id=>params[:job_id]).to_a
     render 'index'
   end
+
   def list_apps
     @jobapplications = []
     Job.where(:employer_id => params[:employer_id].to_i).to_a.each do|job|
       @jobapplications += Jobapplication.where(:job_id => job.id).to_a
     end
-    render :index
+    if(@jobapplications.count==0)
+      @custom_notification = "No job application to show"
+      render "layouts/notifications"
+      return
+    elsif (@jobapplications.count!=0)
+      render :index
+    end
   end
 
   # GET /jobapplications/1
@@ -26,7 +34,6 @@ class JobapplicationsController < ApplicationController
 
   # GET /jobapplications/new
   def new
-
     @jobapplication = Jobapplication.new
     @jobapplication.job_id=params[:job_id].to_i
     if((cookies[:jobseekerID]=="")||(cookies[:jobseekerID].is_a?NilClass))
@@ -41,11 +48,12 @@ class JobapplicationsController < ApplicationController
 
   # GET /jobapplications/1/edit
   def edit
-    if((cookies[:jobseekerID]=="")||(cookies[:jobseekerID].is_a?NilClass))
+    if((cookies[:adminID]!="") && !(cookies[:adminID].is_a?NilClass))
       @custom_error = "Please login as Jobseeker !"
       render "layouts/error"
       return
     end
+
   end
 
   # POST /jobapplications
@@ -55,6 +63,10 @@ class JobapplicationsController < ApplicationController
 
     respond_to do |format|
       if @jobapplication.save
+        @foundjob = Job.find(@jobapplication.job_id)
+        @foundemployerid = @foundjob.employer_id.to_i
+        @foundemployer = Employer.find(@foundemployerid)
+        UserNotifier.jobapplication_submitted_email(@foundemployer).deliver
         format.html { redirect_to @jobapplication, notice: 'Jobapplication was successfully created.' }
         format.json { render :show, status: :created, location: @jobapplication }
       else
@@ -69,6 +81,10 @@ class JobapplicationsController < ApplicationController
   def update
     respond_to do |format|
       if @jobapplication.update(jobapplication_params)
+        if((cookies[:employerID]!="") && (!cookies[:employerID].is_a?NilClass))
+           @foundjobseeker = Jobseeker.find(@jobapplication.jobseeker_id)
+           UserNotifier.jobapplication_status_update_email(@foundjobseeker).deliver
+        end
         format.html { redirect_to @jobapplication, notice: 'Jobapplication was successfully updated.' }
         format.json { render :show, status: :ok, location: @jobapplication }
       else

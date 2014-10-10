@@ -12,15 +12,27 @@ class AdminsController < ApplicationController
   def show
   end
 
+
+
   # GET /admins/new
   def new
+    if((cookies[:adminID]=="") || (cookies[:adminID].is_a?NilClass))
+      @custom_error = "Please login as admin to create new admin"
+      render "layouts/error"
+      return
+    end
     @admin = Admin.new
   end
 
   # GET /admins/1/edit
   def edit
-    if(@admin.email=="admin@admin.com")
-      @custom_error = "Action Not Allowed !   This is a super-admin"
+    if((cookies[:adminID]=="") || (cookies[:adminID].is_a?NilClass))
+      @custom_error = "Insufficient Rights.Please login as admin!"
+      render "layouts/error"
+      return
+    end
+    if((@admin.email=="ad.direwolf.min@gmail.com"))
+      @custom_error = "Action Not Allowed !   This is a super-admin. Please create sample Admin and perform this action"
       render "layouts/error"
       return
       end
@@ -31,10 +43,12 @@ class AdminsController < ApplicationController
   def create
     # render plain: admin_params
     # return
+
     @admin = Admin.new(admin_params)
 
     respond_to do |format|
       if @admin.save
+        UserNotifier.send_signup_email(@admin).deliver
         format.html { redirect_to @admin, notice: 'Admin was successfully created.' }
         format.json { render :show, status: :created, location: @admin }
       else
@@ -47,8 +61,8 @@ class AdminsController < ApplicationController
   # PATCH/PUT /admins/1
   # PATCH/PUT /admins/1.json
   def update
-    if(@admin.email=="admin@admin.com")
-      @custom_error = "Action Not Allowed !   This is a super-admin"
+    if((@admin.email=="ad.direwolf.min@gmail.com"))
+      @custom_error = "Action Not Allowed !   This is a super-admin. Please create sample Admin and perform this action"
       render "layouts/error"
       return
     end
@@ -66,8 +80,8 @@ class AdminsController < ApplicationController
   # DELETE /admins/1
   # DELETE /admins/1.json
   def destroy
-    if(@admin.email=="admin@admin.com")
-      @custom_error = "Action Not Allowed !   This is a super-admin"
+    if((@admin.email=="ad.direwolf.min@gmail.com"))
+      @custom_error = "Action Not Allowed !   This is a super-admin. . Please create sample Admin and perform this action"
       render "layouts/error"
       return
     end
@@ -77,7 +91,6 @@ class AdminsController < ApplicationController
       format.json { head :no_content }
     end
   end
-
 
 
   private
